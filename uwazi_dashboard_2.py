@@ -1,7 +1,5 @@
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+
 
 # Load the Excel file
 uploaded_file = st.file_uploader("Upload Uwazi Report Excel File", type=["xlsx"])
