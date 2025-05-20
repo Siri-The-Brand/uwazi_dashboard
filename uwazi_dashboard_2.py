@@ -7,17 +7,37 @@ from io import BytesIO
 from fpdf import FPDF
 from PIL import Image
 import plotly.io as pio
+import os
 
 # --- Load access code mapping ---
 with open("codes.json") as f:
     code_map = json.load(f)
 
 st.set_page_config(page_title="Uwazi Report", layout="wide")
+
+# Custom style for better tab visibility
+st.markdown("""
+    <style>
+        .stTabs [role="tablist"] {
+            border-bottom: 2px solid #ff4b4b;
+        }
+        .stTabs [role="tab"] {
+            font-weight: bold;
+            font-size: 16px;
+            padding: 12px;
+            margin-right: 12px;
+        }
+        .stAlert-success {
+            font-size: 15px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📘 Uwazi Report Dashboard")
 st.subheader("Login to view your personalized talent insights")
 
 # --- Access Code Input ---
-access_code = st.text_input("Enter your access code (e.g., A654l, B87j)").strip().upper()
+access_code = st.text_input("Enter your access code (e.g., A654L, B87J)").strip().upper()
 
 if access_code in code_map:
     file_path = f"uwazi_reports/{code_map[access_code]}"
@@ -78,6 +98,11 @@ if access_code in code_map:
 
         with tab2:
             st.markdown("### 🧩 Task Scores and Insights")
+            st.markdown("""
+            Each intelligence area is assessed through targeted tasks aligned to its core elements. 
+            The scores below reflect how the learner performed on each task (out of 5). 
+            This helps us identify not only the strongest intelligences, but also specific elements the learner excels in or struggles with.
+            """)
             st.dataframe(task_df[["Intelligence Area", "Task", "Score (out of 5)", "Comments"]])
 
         with tab3:
@@ -101,59 +126,61 @@ if access_code in code_map:
             st.markdown("### 📥 Export Your Report")
 
             def generate_pdf():
-                # Create chart images in memory
+                # Save bar and radar plots to memory
                 bar_img = BytesIO()
                 radar_img = BytesIO()
-                pio.write_image(bar_fig, bar_img, format="png", engine="kaleido")
-                pio.write_image(radar_fig, radar_img, format="png", engine="kaleido")
+                pio.write_image(bar_fig, bar_img, format="png")
+                pio.write_image(radar_fig, radar_img, format="png")
                 bar_img.seek(0)
                 radar_img.seek(0)
 
-                # Convert to PIL and save to temp PNG files (needed by FPDF)
-                Image.open(bar_img).save("bar_chart.png")
-                Image.open(radar_img).save("radar_chart.png")
+                bar_path = "bar_chart.png"
+                radar_path = "radar_chart.png"
+                Image.open(bar_img).save(bar_path)
+                Image.open(radar_img).save(radar_path)
 
-                # Generate PDF
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial", size=12)
-                pdf.cell(200, 10, txt=f"Uwazi Talent Report - {student_name}", ln=True, align="C")
-                pdf.ln(10)
+                pdf.set_fill_color(240, 240, 240)
 
-                pdf.set_font("Arial", "B", size=12)
-                pdf.cell(200, 10, txt="Intelligence Summary", ln=True)
+                pdf.set_font("Arial", "B", 14)
+                pdf.cell(0, 10, f"Uwazi Talent Report – {student_name}", ln=True, align="C")
+                pdf.ln(6)
+
+                pdf.set_font("Arial", "B", 12)
+                pdf.cell(0, 10, "Intelligence Summary", ln=True)
                 pdf.set_font("Arial", size=11)
                 for _, row in overview_df.iterrows():
-                    line = f"{row['Intelligence Area']}: {row['Student Score']} ({row['Overall %']}%)"
-                    pdf.cell(200, 10, txt=line, ln=True)
+                    pdf.cell(0, 8, f"{row['Intelligence Area']}: {row['Student Score']} ({row['Overall %']}%)", ln=True)
+
+                pdf.ln(5)
+                pdf.set_font("Arial", "B", 12)
+                pdf.cell(0, 10, "Visual Insights", ln=True)
+                pdf.image(bar_path, x=10, w=180)
+                pdf.ln(5)
+                pdf.image(radar_path, x=10, w=180)
 
                 pdf.ln(8)
-                pdf.set_font("Arial", "B", size=12)
-                pdf.cell(200, 10, txt="Visual Insights", ln=True)
-                pdf.image("bar_chart.png", x=10, w=180)
-                pdf.ln(5)
-                pdf.image("radar_chart.png", x=10, w=180)
-
-                pdf.ln(10)
-                pdf.set_font("Arial", "B", size=12)
-                pdf.cell(200, 10, txt="Career Recommendations", ln=True)
+                pdf.set_font("Arial", "B", 12)
+                pdf.cell(0, 10, "Career Recommendations", ln=True)
                 pdf.set_font("Arial", size=11)
-                pdf.multi_cell(0, 10, txt=f"Top Intelligence: {top_intelligence}")
-                pdf.multi_cell(0, 10, txt=f"Recommended Shaba Track: {shaba_track}")
+                pdf.multi_cell(0, 8, f"Top Intelligence: {top_intelligence}")
+                pdf.multi_cell(0, 8, f"Recommended Shaba Track: {shaba_track}")
 
                 careers = ", ".join(career_df["Career"].dropna().head(5))
                 degrees = ", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5))
                 tvets = ", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5))
                 schools = ", ".join(career_df["School"].dropna().head(5))
 
-                pdf.multi_cell(0, 10, txt=f"Suggested Careers: {careers}")
-                pdf.multi_cell(0, 10, txt=f"University Programs: {degrees}")
-                pdf.multi_cell(0, 10, txt=f"TVET Programs: {tvets}")
-                pdf.multi_cell(0, 10, txt=f"Schools: {schools}")
+                pdf.multi_cell(0, 8, f"Suggested Careers: {careers}")
+                pdf.multi_cell(0, 8, f"University Programs: {degrees}")
+                pdf.multi_cell(0, 8, f"TVET Programs: {tvets}")
+                pdf.multi_cell(0, 8, f"Schools: {schools}")
 
-                pdf.ln(5)
                 pdf.set_font("Arial", "I", size=9)
-                pdf.multi_cell(0, 8, txt="Disclaimer: This report is designed for developmental purposes only. It is not a diagnostic tool or substitute for professional psychological evaluation.")
+                pdf.ln(4)
+                pdf.multi_cell(0, 6, "Disclaimer: This report is for developmental purposes only. Not a diagnostic tool or substitute for licensed psychological evaluation.")
 
                 pdf_bytes = pdf.output(dest="S").encode("latin1")
                 return BytesIO(pdf_bytes)
