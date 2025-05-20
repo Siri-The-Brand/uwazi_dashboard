@@ -182,7 +182,8 @@ if access_code in code_map:
                 pdf.ln(4)
                 pdf.multi_cell(0, 6, "Disclaimer: This report is for developmental purposes only. Not a diagnostic tool or substitute for licensed psychological evaluation.")
 
-                pdf_bytes = pdf.output(dest="S").encode("latin1")
+                pdf_text = pdf.output(dest="S")
+                pdf_bytes = pdf_text.encode("latin1", "replace")
                 return BytesIO(pdf_bytes)
 
             st.download_button(
