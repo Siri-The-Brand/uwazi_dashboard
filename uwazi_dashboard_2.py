@@ -15,17 +15,21 @@ with open("codes.json") as f:
 
 st.set_page_config(page_title="Uwazi Report", layout="wide")
 
-# Custom style for better tab visibility
+# --- Custom styling ---
 st.markdown("""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+        html, body, [class*="css"] {
+            font-family: 'Poppins', sans-serif;
+        }
         .stTabs [role="tablist"] {
-            border-bottom: 2px solid #ff4b4b;
+            border-bottom: 2px solid #25a7a7;
         }
         .stTabs [role="tab"] {
-            font-weight: bold;
+            font-weight: 600;
             font-size: 16px;
             padding: 12px;
-            margin-right: 12px;
+            margin-right: 16px;
         }
         .stAlert-success {
             font-size: 15px;
@@ -33,78 +37,67 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- Page title ---
 st.title("📘 Uwazi Report Dashboard")
 st.subheader("Login to view your personalized talent insights")
 
-# --- Access Code Input ---
+# --- Access code login ---
 access_code = st.text_input("Enter your access code (e.g., A654L, B87J)").strip().upper()
 
+# --- If valid code ---
 if access_code in code_map:
     file_path = f"uwazi_reports/{code_map[access_code]}"
 
     try:
-        # Load all needed sheets
         overview_df = pd.read_excel(file_path, sheet_name="Assessment Overview")
         task_df = pd.read_excel(file_path, sheet_name="Task Scores")
         summary_df = pd.read_excel(file_path, sheet_name="Summary", header=None)
         solver_info_df = pd.read_excel(file_path, sheet_name="Siri Solvers Info")
         career_df = pd.read_excel(file_path, sheet_name="Career Suggestions")
 
-        # Extract key details
-        student_name = solver_info_df.iloc[0, 1] if not solver_info_df.empty else "Unnamed Solver"
-        top_intelligence = solver_info_df.iloc[0, 3] if len(solver_info_df.columns) > 3 else "Not Available"
-        shaba_track = solver_info_df.iloc[0, 4] if len(solver_info_df.columns) > 4 else "Not Available"
-        report_summary = summary_df.iloc[1, 2] if not summary_df.empty else "No summary available"
+        student_name = solver_info_df.iloc[0, 1]
+        top_intelligence = solver_info_df.iloc[0, 3]
+        shaba_track = solver_info_df.iloc[0, 4]
+        report_summary = summary_df.iloc[1, 2]
 
-        st.success(f"🎉 Welcome, {student_name}!\n\nThis report summarizes your performance across 99 psychometric tasks in the Uwazi assessment. It is intended to give insight into your learning strengths and future pathways.")
+        st.success(f"🎉 Welcome, {student_name}! This report summarizes your performance across 99 psychometric tasks.")
+        st.markdown("📌 *Use the clearly labeled tabs below to explore intelligence insights, detailed task breakdowns, and personalized recommendations.*")
+        st.markdown("⚠️ *Disclaimer: This report is for developmental purposes only. It is not a clinical or diagnostic tool.*")
 
-        st.markdown("📌 *Use the tabs below to explore intelligence insights, task scores, and personalized recommendations.*")
-        st.markdown("⚠️ *Disclaimer: This report is for educational and personal development purposes only. It does not replace professional clinical or psychological evaluations.*")
+        # --- TABS ---
+        tab1, tab2, tab3, tab4 = st.tabs(["🧠 Overview", "🧩 Task Insights", "🎯 Career Recommendations", "📥 Download Report"])
 
-        # --- Tabs Layout ---
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "🧠 Overview", "🧩 Task Insights", "🎯 Career Recommendations", "📥 Download Report"
-        ])
-
+        # --- TAB 1: Overview ---
         with tab1:
             st.markdown("### 📝 Summary Overview")
             st.markdown(report_summary)
 
             col1, col2 = st.columns(2)
             avg_score = overview_df['Student Score'].mean()
-            task_completion = (overview_df['Tasks_Completed'].sum() / overview_df['Number of Tasks'].sum()) * 100
+            completion = (overview_df['Tasks_Completed'].sum() / overview_df['Number of Tasks'].sum()) * 100
             col1.metric("📈 Average Score", f"{avg_score:.1f}")
-            col2.metric("✅ Task Completion", f"{task_completion:.1f}%")
+            col2.metric("✅ Task Completion", f"{completion:.1f}%")
 
             st.markdown("### 📊 Scores by Intelligence")
-            bar_fig = px.bar(
-                overview_df, x="Intelligence Area", y="Student Score",
-                text="Student Score", color="Intelligence Area"
-            )
+            bar_fig = px.bar(overview_df, x="Intelligence Area", y="Student Score", text="Student Score", color="Intelligence Area")
             st.plotly_chart(bar_fig, use_container_width=True)
 
             st.markdown("### 🕸️ Overall Intelligence Strengths")
             radar_fig = go.Figure()
-            radar_fig.add_trace(go.Scatterpolar(
-                r=overview_df["Overall %"],
-                theta=overview_df["Intelligence Area"],
-                fill="toself"
-            ))
-            radar_fig.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-                showlegend=False
-            )
+            radar_fig.add_trace(go.Scatterpolar(r=overview_df["Overall %"], theta=overview_df["Intelligence Area"], fill="toself"))
+            radar_fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False)
             st.plotly_chart(radar_fig, use_container_width=True)
 
+        # --- TAB 2: Task Insights ---
         with tab2:
             st.markdown("### 🧩 Task Scores and Insights")
             st.markdown("""
-            Each intelligence area is assessed through targeted tasks aligned to its core elements. 
-            The scores below reflect how the learner performed on each task (out of 5). 
-            This helps us identify not only the strongest intelligences, but also specific elements the learner excels in or struggles with.
+            Each intelligence was tested using multiple tasks. These scores (out of 5) reveal specific elements of strength or development areas.
+            You can use this to explore patterns within each intelligence type.
             """)
             st.dataframe(task_df[["Intelligence Area", "Task", "Score (out of 5)", "Comments"]])
 
+        # --- TAB 3: Career Recommendations ---
         with tab3:
             st.markdown("### 🎯 Career & Shaba Recommendations")
             st.markdown(f"**🌟 Top Intelligence**: `{top_intelligence}`")
@@ -122,11 +115,14 @@ if access_code in code_map:
             st.markdown("#### 🏫 Suggested Schools")
             st.write(", ".join(career_df["School"].dropna().head(5)))
 
+        # --- TAB 4: PDF Export ---
         with tab4:
             st.markdown("### 📥 Export Your Report")
 
+            def safe_text(text):
+                return text.encode("latin1", "replace").decode("latin1")
+
             def generate_pdf():
-                # Save bar and radar plots to memory
                 bar_img = BytesIO()
                 radar_img = BytesIO()
                 pio.write_image(bar_fig, bar_img, format="png")
@@ -134,53 +130,45 @@ if access_code in code_map:
                 bar_img.seek(0)
                 radar_img.seek(0)
 
-                bar_path = "bar_chart.png"
-                radar_path = "radar_chart.png"
-                Image.open(bar_img).save(bar_path)
-                Image.open(radar_img).save(radar_path)
+                Image.open(bar_img).save("bar_chart.png")
+                Image.open(radar_img).save("radar_chart.png")
 
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial", size=12)
-                pdf.set_fill_color(240, 240, 240)
 
                 pdf.set_font("Arial", "B", 14)
-                pdf.cell(0, 10, f"Uwazi Talent Report – {student_name}", ln=True, align="C")
+                pdf.cell(0, 10, safe_text(f"Uwazi Talent Report – {student_name}"), ln=True, align="C")
                 pdf.ln(6)
 
                 pdf.set_font("Arial", "B", 12)
                 pdf.cell(0, 10, "Intelligence Summary", ln=True)
                 pdf.set_font("Arial", size=11)
                 for _, row in overview_df.iterrows():
-                    pdf.cell(0, 8, f"{row['Intelligence Area']}: {row['Student Score']} ({row['Overall %']}%)", ln=True)
+                    line = f"{row['Intelligence Area']}: {row['Student Score']} ({row['Overall %']}%)"
+                    pdf.cell(0, 8, safe_text(line), ln=True)
 
                 pdf.ln(5)
-                pdf.set_font("Arial", "B", 12)
                 pdf.cell(0, 10, "Visual Insights", ln=True)
-                pdf.image(bar_path, x=10, w=180)
+                pdf.image("bar_chart.png", x=10, w=180)
                 pdf.ln(5)
-                pdf.image(radar_path, x=10, w=180)
+                pdf.image("radar_chart.png", x=10, w=180)
 
                 pdf.ln(8)
                 pdf.set_font("Arial", "B", 12)
                 pdf.cell(0, 10, "Career Recommendations", ln=True)
                 pdf.set_font("Arial", size=11)
-                pdf.multi_cell(0, 8, f"Top Intelligence: {top_intelligence}")
-                pdf.multi_cell(0, 8, f"Recommended Shaba Track: {shaba_track}")
+                pdf.multi_cell(0, 8, safe_text(f"Top Intelligence: {top_intelligence}"))
+                pdf.multi_cell(0, 8, safe_text(f"Recommended Shaba Track: {shaba_track}"))
 
-                careers = ", ".join(career_df["Career"].dropna().head(5))
-                degrees = ", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5))
-                tvets = ", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5))
-                schools = ", ".join(career_df["School"].dropna().head(5))
+                pdf.multi_cell(0, 8, safe_text("Suggested Careers: " + ", ".join(career_df["Career"].dropna().head(5))))
+                pdf.multi_cell(0, 8, safe_text("University Programs: " + ", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5))))
+                pdf.multi_cell(0, 8, safe_text("TVET Programs: " + ", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5))))
+                pdf.multi_cell(0, 8, safe_text("Schools: " + ", ".join(career_df["School"].dropna().head(5))))
 
-                pdf.multi_cell(0, 8, f"Suggested Careers: {careers}")
-                pdf.multi_cell(0, 8, f"University Programs: {degrees}")
-                pdf.multi_cell(0, 8, f"TVET Programs: {tvets}")
-                pdf.multi_cell(0, 8, f"Schools: {schools}")
-
+                pdf.ln(5)
                 pdf.set_font("Arial", "I", size=9)
-                pdf.ln(4)
-                pdf.multi_cell(0, 6, "Disclaimer: This report is for developmental purposes only. Not a diagnostic tool or substitute for licensed psychological evaluation.")
+                pdf.multi_cell(0, 6, safe_text("Disclaimer: This report is for developmental purposes only. It is not a clinical or diagnostic tool."))
 
                 pdf_text = pdf.output(dest="S")
                 pdf_bytes = pdf_text.encode("latin1", "replace")
