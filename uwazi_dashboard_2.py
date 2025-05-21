@@ -7,29 +7,24 @@ from io import BytesIO
 from fpdf import FPDF
 from PIL import Image
 import plotly.io as pio
-import os
 
-# --- Load access code mapping ---
+# Load access code mapping
 with open("codes.json") as f:
     code_map = json.load(f)
 
 st.set_page_config(page_title="Uwazi Report", layout="wide")
 
-# --- Custom styling ---
+# Styling for better UI/UX
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
-        html, body, [class*="css"] {
-            font-family: 'Poppins', sans-serif;
-        }
         .stTabs [role="tablist"] {
-            border-bottom: 2px solid #25a7a7;
+            border-bottom: 2px solid #009999;
         }
         .stTabs [role="tab"] {
-            font-weight: 600;
+            font-weight: bold;
             font-size: 16px;
             padding: 12px;
-            margin-right: 16px;
+            margin-right: 12px;
         }
         .stAlert-success {
             font-size: 15px;
@@ -37,17 +32,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Page title ---
 st.title("📘 Uwazi Report Dashboard")
 st.subheader("Login to view your personalized talent insights")
 
-# --- Access code login ---
 access_code = st.text_input("Enter your access code (e.g., A654L, B87J)").strip().upper()
 
-# --- If valid code ---
 if access_code in code_map:
     file_path = f"uwazi_reports/{code_map[access_code]}"
-
     try:
         overview_df = pd.read_excel(file_path, sheet_name="Assessment Overview")
         task_df = pd.read_excel(file_path, sheet_name="Task Scores")
@@ -55,28 +46,28 @@ if access_code in code_map:
         solver_info_df = pd.read_excel(file_path, sheet_name="Siri Solvers Info")
         career_df = pd.read_excel(file_path, sheet_name="Career Suggestions")
 
-        student_name = solver_info_df.iloc[0, 1]
-        top_intelligence = solver_info_df.iloc[0, 3]
-        shaba_track = solver_info_df.iloc[0, 4]
-        report_summary = summary_df.iloc[1, 2]
+        student_name = solver_info_df.iloc[0, 1] if not solver_info_df.empty else "Unnamed Solver"
+        top_intelligence = solver_info_df.iloc[0, 3] if len(solver_info_df.columns) > 3 else "Not Available"
+        shaba_track = solver_info_df.iloc[0, 4] if len(solver_info_df.columns) > 4 else "Not Available"
+        report_summary = summary_df.iloc[1, 2] if not summary_df.empty else "No summary available"
 
-        st.success(f"🎉 Welcome, {student_name}! This report summarizes your performance across 99 psychometric tasks.")
-        st.markdown("📌 *Use the clearly labeled tabs below to explore intelligence insights, detailed task breakdowns, and personalized recommendations.*")
-        st.markdown("⚠️ *Disclaimer: This report is for developmental purposes only. It is not a clinical or diagnostic tool.*")
+        st.success(f"🎉 Welcome, {student_name}! This report summarizes your performance across 99 psychometric tasks in the Uwazi assessment.")
+        st.markdown("📌 *Click the tabs below to explore your results.*")
+        st.markdown("⚠️ *Disclaimer: This report is for personal development only. Not a clinical or psychological diagnosis.*")
 
-        # --- TABS ---
-        tab1, tab2, tab3, tab4 = st.tabs(["🧠 Overview", "🧩 Task Insights", "🎯 Career Recommendations", "📥 Download Report"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "🧠 Overview", "🧩 Task Insights", "🎯 Career Recommendations", "📥 Download Report", "🔍 About Uwazi"
+        ])
 
-        # --- TAB 1: Overview ---
         with tab1:
             st.markdown("### 📝 Summary Overview")
-            st.markdown(report_summary)
+            st.info(report_summary)
 
             col1, col2 = st.columns(2)
             avg_score = overview_df['Student Score'].mean()
-            completion = (overview_df['Tasks_Completed'].sum() / overview_df['Number of Tasks'].sum()) * 100
+            task_completion = (overview_df['Tasks_Completed'].sum() / overview_df['Number of Tasks'].sum()) * 100
             col1.metric("📈 Average Score", f"{avg_score:.1f}")
-            col2.metric("✅ Task Completion", f"{completion:.1f}%")
+            col2.metric("✅ Task Completion", f"{task_completion:.1f}%")
 
             st.markdown("### 📊 Scores by Intelligence")
             bar_fig = px.bar(overview_df, x="Intelligence Area", y="Student Score", text="Student Score", color="Intelligence Area")
@@ -88,16 +79,13 @@ if access_code in code_map:
             radar_fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False)
             st.plotly_chart(radar_fig, use_container_width=True)
 
-        # --- TAB 2: Task Insights ---
         with tab2:
             st.markdown("### 🧩 Task Scores and Insights")
             st.markdown("""
-            Each intelligence was tested using multiple tasks. These scores (out of 5) reveal specific elements of strength or development areas.
-            You can use this to explore patterns within each intelligence type.
+            Each task targets specific elements within an intelligence area. These scores (out of 5) reveal your personal strengths and growth areas. They form the basis for the club or course recommendations you're receiving.
             """)
             st.dataframe(task_df[["Intelligence Area", "Task", "Score (out of 5)", "Comments"]])
 
-        # --- TAB 3: Career Recommendations ---
         with tab3:
             st.markdown("### 🎯 Career & Shaba Recommendations")
             st.markdown(f"**🌟 Top Intelligence**: `{top_intelligence}`")
@@ -115,63 +103,68 @@ if access_code in code_map:
             st.markdown("#### 🏫 Suggested Schools")
             st.write(", ".join(career_df["School"].dropna().head(5)))
 
-        # --- TAB 4: PDF Export ---
         with tab4:
-            st.markdown("### 📥 Export Your Report")
-
-            def safe_text(text):
-                return text.encode("latin1", "replace").decode("latin1")
+            st.markdown("### 📥 Export Your Full Report with Charts and Insights")
 
             def generate_pdf():
+                # Create chart images
                 bar_img = BytesIO()
                 radar_img = BytesIO()
                 pio.write_image(bar_fig, bar_img, format="png")
                 pio.write_image(radar_fig, radar_img, format="png")
                 bar_img.seek(0)
                 radar_img.seek(0)
-
-                Image.open(bar_img).save("bar_chart.png")
-                Image.open(radar_img).save("radar_chart.png")
+                bar_path, radar_path = "bar_chart.png", "radar_chart.png"
+                Image.open(bar_img).save(bar_path)
+                Image.open(radar_img).save(radar_path)
 
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial", size=12)
 
                 pdf.set_font("Arial", "B", 14)
-                pdf.cell(0, 10, safe_text(f"Uwazi Talent Report – {student_name}"), ln=True, align="C")
-                pdf.ln(6)
+                pdf.cell(0, 10, f"Uwazi Talent Report – {student_name}", ln=True, align="C")
+                pdf.ln(8)
+
+                pdf.set_font("Arial", size=11)
+                pdf.multi_cell(0, 8, report_summary)
+                pdf.ln(5)
 
                 pdf.set_font("Arial", "B", 12)
-                pdf.cell(0, 10, "Intelligence Summary", ln=True)
+                pdf.cell(0, 10, "Scores by Intelligence", ln=True)
                 pdf.set_font("Arial", size=11)
                 for _, row in overview_df.iterrows():
                     line = f"{row['Intelligence Area']}: {row['Student Score']} ({row['Overall %']}%)"
-                    pdf.cell(0, 8, safe_text(line), ln=True)
+                    pdf.cell(0, 8, line.encode('latin1', 'replace').decode('latin1'), ln=True)
 
                 pdf.ln(5)
-                pdf.cell(0, 10, "Visual Insights", ln=True)
-                pdf.image("bar_chart.png", x=10, w=180)
-                pdf.ln(5)
-                pdf.image("radar_chart.png", x=10, w=180)
+                pdf.cell(0, 10, "Charts", ln=True)
+                pdf.image(bar_path, x=10, w=180)
+                pdf.ln(3)
+                pdf.image(radar_path, x=10, w=180)
 
-                pdf.ln(8)
+                pdf.ln(5)
                 pdf.set_font("Arial", "B", 12)
                 pdf.cell(0, 10, "Career Recommendations", ln=True)
                 pdf.set_font("Arial", size=11)
-                pdf.multi_cell(0, 8, safe_text(f"Top Intelligence: {top_intelligence}"))
-                pdf.multi_cell(0, 8, safe_text(f"Recommended Shaba Track: {shaba_track}"))
+                pdf.multi_cell(0, 8, f"Top Intelligence: {top_intelligence}")
+                pdf.multi_cell(0, 8, f"Recommended Shaba Track: {shaba_track}")
 
-                pdf.multi_cell(0, 8, safe_text("Suggested Careers: " + ", ".join(career_df["Career"].dropna().head(5))))
-                pdf.multi_cell(0, 8, safe_text("University Programs: " + ", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5))))
-                pdf.multi_cell(0, 8, safe_text("TVET Programs: " + ", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5))))
-                pdf.multi_cell(0, 8, safe_text("Schools: " + ", ".join(career_df["School"].dropna().head(5))))
+                careers = ", ".join(career_df["Career"].dropna().head(5))
+                degrees = ", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5))
+                tvets = ", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5))
+                schools = ", ".join(career_df["School"].dropna().head(5))
+
+                pdf.multi_cell(0, 8, f"Suggested Careers: {careers}")
+                pdf.multi_cell(0, 8, f"University Programs: {degrees}")
+                pdf.multi_cell(0, 8, f"TVET Programs: {tvets}")
+                pdf.multi_cell(0, 8, f"Schools: {schools}")
 
                 pdf.ln(5)
                 pdf.set_font("Arial", "I", size=9)
-                pdf.multi_cell(0, 6, safe_text("Disclaimer: This report is for developmental purposes only. It is not a clinical or diagnostic tool."))
+                pdf.multi_cell(0, 6, "Disclaimer: This report is for personal development and does not substitute for licensed psychological evaluations.")
 
-                pdf_text = pdf.output(dest="S")
-                pdf_bytes = pdf_text.encode("latin1", "replace")
+                pdf_bytes = pdf.output(dest="S").encode("latin1", "replace")
                 return BytesIO(pdf_bytes)
 
             st.download_button(
@@ -181,6 +174,13 @@ if access_code in code_map:
                 mime="application/pdf"
             )
 
+        with tab5:
+            st.markdown("### 🔍 Why Soma Siri Afrika, Uwazi & Shaba")
+            st.markdown("""
+            - **Soma Siri Afrika** is a pan-African initiative to identify, nurture, and showcase talent using evidence-based, culturally rooted methods.
+            - **Uwazi** is a 99-task assessment measuring 9 multiple intelligences through real psychometric tasks—not just surveys.
+            - **Shaba** is a specialized club/course track built from your strengths. Instead of patching your weaknesses, we build your future from what you do best.
+            """)
     except Exception as e:
         st.error("❌ Failed to load your report. Please contact support.")
         st.exception(e)
