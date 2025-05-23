@@ -51,10 +51,10 @@ if access_code in code_map:
         career_df       = pd.read_excel(file_path, sheet_name="Career Suggestions")
 
         # — Extract key fields —
-        student_name    = solver_info_df.iloc[0,1] if not solver_info_df.empty else "Unnamed Solver"
-        top_intel       = solver_info_df.iloc[0,3] if solver_info_df.shape[1]>3 else "N/A"
-        shaba_track     = solver_info_df.iloc[0,4] if solver_info_df.shape[1]>4 else "N/A"
-        report_summary  = summary_df.iloc[1,2]  if summary_df.shape[0]>1 else "No summary available"
+        student_name    = solver_info_df.iloc[0,1]   if not solver_info_df.empty else "Unnamed Solver"
+        top_intel       = solver_info_df.iloc[0,3]   if solver_info_df.shape[1]>3 else "N/A"
+        shaba_track     = solver_info_df.iloc[0,4]   if solver_info_df.shape[1]>4 else "N/A"
+        report_summary  = summary_df.iloc[1,2]       if summary_df.shape[0]>1 else "No summary available"
 
         # — Welcome & instructions —
         st.success(
@@ -83,7 +83,8 @@ if access_code in code_map:
 
             c1, c2 = st.columns(2)
             avg_score       = overview_df['Student Score'].mean()
-            completion_pct  = (overview_df['Tasks_Completed'].sum() / overview_df['Number of Tasks'].sum())*100
+            completion_pct  = (overview_df['Tasks_Completed'].sum()
+                                / overview_df['Number of Tasks'].sum())*100
             c1.metric("📈 Average Score", f"{avg_score:.1f}")
             c2.metric("✅ Task Completion", f"{completion_pct:.1f}%")
 
@@ -138,12 +139,12 @@ if access_code in code_map:
             st.markdown("#### 🏫 Suggested Schools")
             st.write(", ".join(career_df["School"].dropna().head(5)))
 
-        # — Tab 4: Download Report (with Poppins embed) —
+        # — Tab 4: Download Report (with Poppins) —
         with tab4:
             st.markdown("### 📥 Export Your Full Report with Charts & Insights")
 
             def generate_pdf():
-                # — render charts to temporary PNGs —
+                # — render charts to memory & save PNGs —
                 bar_buf   = BytesIO()
                 radar_buf = BytesIO()
                 pio.write_image(bar_fig,   bar_buf,   format="png")
@@ -152,14 +153,15 @@ if access_code in code_map:
                 Image.open(bar_buf).save("bar_chart.png")
                 Image.open(radar_buf).save("radar_chart.png")
 
-                # — build PDF —
+                # — build PDF with Poppins fonts (uni=True) —
                 pdf = FPDF()
                 pdf.add_font("Poppins", "", "fonts/Poppins-Regular.ttf", uni=True)
                 pdf.add_font("Poppins", "B", "fonts/Poppins-Bold.ttf",      uni=True)
-                pdf.set_font("Poppins", "B", 14)
+                pdf.set_auto_page_break(True, margin=15)
                 pdf.add_page()
 
                 # Title
+                pdf.set_font("Poppins", "B", 14)
                 pdf.cell(0, 10, f"Uwazi Talent Report – {student_name}", ln=True, align="C")
                 pdf.ln(6)
 
@@ -167,24 +169,24 @@ if access_code in code_map:
                 pdf.set_font("Poppins", "", 11)
                 pdf.multi_cell(0, 8, report_summary)
 
-                # Scores section
+                # Scores
                 pdf.ln(5)
                 pdf.set_font("Poppins", "B", 12)
                 pdf.cell(0, 10, "Scores by Intelligence", ln=True)
                 pdf.set_font("Poppins", "", 11)
                 for _, r in overview_df.iterrows():
-                    txt = f"{r['Intelligence Area']}: {r['Student Score']} ({r['Overall %']}%)"
-                    pdf.multi_cell(0, 8, txt)
+                    line = f"{r['Intelligence Area']}: {r['Student Score']} ({r['Overall %']}%)"
+                    pdf.multi_cell(0, 8, line)
 
                 # Charts
                 pdf.ln(5)
                 pdf.set_font("Poppins", "B", 12)
                 pdf.cell(0, 10, "Visual Insights", ln=True)
-                pdf.image("bar_chart.png",   x=10, w=180)
+                pdf.image("bar_chart.png",   x=pdf.l_margin, w=pdf.w - pdf.l_margin - pdf.r_margin)
                 pdf.ln(4)
-                pdf.image("radar_chart.png", x=10, w=180)
+                pdf.image("radar_chart.png", x=pdf.l_margin, w=pdf.w - pdf.l_margin - pdf.r_margin)
 
-                # Career recs
+                # Career recommendations
                 pdf.ln(6)
                 pdf.set_font("Poppins", "B", 12)
                 pdf.cell(0, 10, "Career Recommendations", ln=True)
@@ -199,20 +201,19 @@ if access_code in code_map:
 
                 pdf.multi_cell(0, 8, f"Suggested Careers: {careers}")
                 pdf.multi_cell(0, 8, f"University Programs: {degrees}")
-                pdf.multi_cell(0, 8, f"TVET Programs: {tvets}")
+                pdf.multi_cell(0, 8, f"TVET Courses: {tvets}")
                 pdf.multi_cell(0, 8, f"Schools: {schools}")
 
-                # Disclaimer
+                # Disclaimer footer
                 pdf.ln(4)
                 pdf.set_font("Poppins", "I", 9)
                 pdf.multi_cell(
                     0, 6,
-                    "Disclaimer: This report is for personal development only. "
+                    "⚠️ This report is for personal development only. "
                     "Not a substitute for licensed psychological evaluation."
                 )
 
-                pdf_bytes = pdf.output(dest="S").encode("latin1", "replace")
-                return BytesIO(pdf_bytes)
+                return BytesIO(pdf.output(dest="S").encode("latin1", "replace"))
 
             st.download_button(
                 label="📥 Download PDF Report",
