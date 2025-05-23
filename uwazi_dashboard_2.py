@@ -47,7 +47,6 @@ if access_code in code_map:
         solver_info_df = pd.read_excel(file_path, sheet_name="Siri Solvers Info")
         career_df = pd.read_excel(file_path, sheet_name="Career Suggestions")
 
-        # Extract data
         student_name = solver_info_df.iloc[0, 1] if not solver_info_df.empty else "Unnamed Solver"
         top_intelligence = solver_info_df.iloc[0, 3] if len(solver_info_df.columns) > 3 else "Not Available"
         shaba_track = solver_info_df.iloc[0, 4] if len(solver_info_df.columns) > 4 else "Not Available"
@@ -112,6 +111,7 @@ if access_code in code_map:
                 pio.write_image(radar_fig, radar_img, format="png")
                 bar_img.seek(0)
                 radar_img.seek(0)
+
                 bar_path = "bar_chart.png"
                 radar_path = "radar_chart.png"
                 Image.open(bar_img).save(bar_path)
@@ -147,20 +147,22 @@ if access_code in code_map:
                 pdf.set_font("Helvetica", size=11)
                 pdf.multi_cell(0, 8, f"Top Intelligence: {top_intelligence}")
                 pdf.multi_cell(0, 8, f"Recommended Shaba Track: {shaba_track}")
+
                 careers = ", ".join(career_df["Career"].dropna().head(5))
                 degrees = ", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5))
                 tvets = ", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5))
                 schools = ", ".join(career_df["School"].dropna().head(5))
+
                 pdf.multi_cell(0, 8, f"Suggested Careers: {careers}")
                 pdf.multi_cell(0, 8, f"University Programs: {degrees}")
                 pdf.multi_cell(0, 8, f"TVET Programs: {tvets}")
                 pdf.multi_cell(0, 8, f"Schools: {schools}")
+
                 pdf.set_font("Helvetica", "I", 9)
                 pdf.ln(4)
                 pdf.multi_cell(0, 6, "Disclaimer: This report is for developmental purposes only. It is not a substitute for clinical evaluation.")
 
-                pdf_bytes = pdf.output(dest="S").encode("latin1", "replace")
-                return BytesIO(pdf_bytes)
+                return BytesIO(pdf.output(dest="S").encode("utf-8", "replace"))
 
             st.download_button(
                 label="📥 Download PDF Report",
