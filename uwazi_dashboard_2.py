@@ -164,7 +164,7 @@ if access_code in code_map:
                 pdf.set_font("Arial", "I", size=9)
                 pdf.multi_cell(0, 6, "Disclaimer: This report is for personal development and does not substitute for licensed psychological evaluations.")
 
-                pdf_bytes = pdf.output(dest="S").encode("latin1", "replace")
+                pdf_bytes = pdf.output(dest="S").encode("latin1", errors="ignore")
                 return BytesIO(pdf_bytes)
 
             st.download_button(
