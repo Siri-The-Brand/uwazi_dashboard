@@ -4,9 +4,9 @@ import json
 import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
-from fpdf import FPDF
 from PIL import Image
 import plotly.io as pio
+from fpdf import FPDF
 
 # Load access code mapping
 with open("codes.json") as f:
@@ -14,7 +14,7 @@ with open("codes.json") as f:
 
 st.set_page_config(page_title="Uwazi Report", layout="wide")
 
-# Styling for better UI/UX
+# --- UI Styling ---
 st.markdown("""
     <style>
         .stTabs [role="tablist"] {
@@ -40,6 +40,7 @@ access_code = st.text_input("Enter your access code (e.g., A654L, B87J)").strip(
 if access_code in code_map:
     file_path = f"uwazi_reports/{code_map[access_code]}"
     try:
+        # Load Excel sheets
         overview_df = pd.read_excel(file_path, sheet_name="Assessment Overview")
         task_df = pd.read_excel(file_path, sheet_name="Task Scores")
         summary_df = pd.read_excel(file_path, sheet_name="Summary", header=None)
@@ -82,7 +83,7 @@ if access_code in code_map:
         with tab2:
             st.markdown("### 🧩 Task Scores and Insights")
             st.markdown("""
-            Each task targets specific elements within an intelligence area. These scores (out of 5) reveal your personal strengths and growth areas. They form the basis for the club or course recommendations you're receiving.
+            Each task targets specific elements within an intelligence area. These scores (out of 5) reveal your personal strengths and growth areas.
             """)
             st.dataframe(task_df[["Intelligence Area", "Task", "Score (out of 5)", "Comments"]])
 
@@ -90,63 +91,60 @@ if access_code in code_map:
             st.markdown("### 🎯 Career & Shaba Recommendations")
             st.markdown(f"**🌟 Top Intelligence**: `{top_intelligence}`")
             st.markdown(f"**🎓 Recommended Shaba Track**: `{shaba_track}`")
-
             st.markdown("#### 🔍 Career Matches")
             st.write(", ".join(career_df["Career"].dropna().head(5)))
-
             st.markdown("#### 🎓 Recommended University Degrees")
             st.write(", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5)))
-
             st.markdown("#### 🛠 Recommended TVET Courses")
             st.write(", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5)))
-
             st.markdown("#### 🏫 Suggested Schools")
             st.write(", ".join(career_df["School"].dropna().head(5)))
 
         with tab4:
-            st.markdown("### 📥 Export Your Full Report with Charts and Insights")
+            st.markdown("### 📥 Export Your Report")
 
             def generate_pdf():
-                # Create chart images
+                # Save plots to memory
                 bar_img = BytesIO()
                 radar_img = BytesIO()
                 pio.write_image(bar_fig, bar_img, format="png")
                 pio.write_image(radar_fig, radar_img, format="png")
                 bar_img.seek(0)
                 radar_img.seek(0)
-                bar_path, radar_path = "bar_chart.png", "radar_chart.png"
+
+                bar_path = "bar_chart.png"
+                radar_path = "radar_chart.png"
                 Image.open(bar_img).save(bar_path)
                 Image.open(radar_img).save(radar_path)
 
                 pdf = FPDF()
                 pdf.add_page()
-                pdf.set_font("Arial", size=12)
+                pdf.set_font("Helvetica", "B", 14)
+                pdf.cell(0, 10, f"Uwazi Talent Report - {student_name}", ln=True, align="C")
+                pdf.ln(6)
 
-                pdf.set_font("Arial", "B", 14)
-                pdf.cell(0, 10, f"Uwazi Talent Report – {student_name}", ln=True, align="C")
-                pdf.ln(8)
-
-                pdf.set_font("Arial", size=11)
-                pdf.multi_cell(0, 8, report_summary)
+                pdf.set_font("Helvetica", size=11)
+                pdf.multi_cell(0, 8, str(report_summary))
                 pdf.ln(5)
 
-                pdf.set_font("Arial", "B", 12)
+                pdf.set_font("Helvetica", "B", 12)
                 pdf.cell(0, 10, "Scores by Intelligence", ln=True)
-                pdf.set_font("Arial", size=11)
+                pdf.set_font("Helvetica", size=11)
                 for _, row in overview_df.iterrows():
                     line = f"{row['Intelligence Area']}: {row['Student Score']} ({row['Overall %']}%)"
-                    pdf.cell(0, 8, line.encode('latin1', 'replace').decode('latin1'), ln=True)
+                    pdf.multi_cell(0, 8, line)
 
-                pdf.ln(5)
+                pdf.ln(4)
+                pdf.set_font("Helvetica", "B", 12)
                 pdf.cell(0, 10, "Charts", ln=True)
                 pdf.image(bar_path, x=10, w=180)
-                pdf.ln(3)
+                pdf.ln(4)
                 pdf.image(radar_path, x=10, w=180)
 
-                pdf.ln(5)
-                pdf.set_font("Arial", "B", 12)
+                pdf.ln(6)
+                pdf.set_font("Helvetica", "B", 12)
                 pdf.cell(0, 10, "Career Recommendations", ln=True)
-                pdf.set_font("Arial", size=11)
+                pdf.set_font("Helvetica", size=11)
                 pdf.multi_cell(0, 8, f"Top Intelligence: {top_intelligence}")
                 pdf.multi_cell(0, 8, f"Recommended Shaba Track: {shaba_track}")
 
@@ -160,12 +158,11 @@ if access_code in code_map:
                 pdf.multi_cell(0, 8, f"TVET Programs: {tvets}")
                 pdf.multi_cell(0, 8, f"Schools: {schools}")
 
-                pdf.ln(5)
-                pdf.set_font("Arial", "I", size=9)
-                pdf.multi_cell(0, 6, "Disclaimer: This report is for personal development and does not substitute for licensed psychological evaluations.")
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.ln(4)
+                pdf.multi_cell(0, 6, "Disclaimer: This report is for developmental purposes only. It is not a substitute for clinical evaluation.")
 
-                pdf_bytes = pdf.output(dest="S").encode("latin1", "replace")
-                return BytesIO(pdf_bytes)
+                return BytesIO(pdf.output(dest="S").encode("utf-8", "replace"))
 
             st.download_button(
                 label="📥 Download PDF Report",
@@ -181,6 +178,7 @@ if access_code in code_map:
             - **Uwazi** is a 99-task assessment measuring 9 multiple intelligences through real psychometric tasks—not just surveys.
             - **Shaba** is a specialized club/course track built from your strengths. Instead of patching your weaknesses, we build your future from what you do best.
             """)
+
     except Exception as e:
         st.error("❌ Failed to load your report. Please contact support.")
         st.exception(e)
