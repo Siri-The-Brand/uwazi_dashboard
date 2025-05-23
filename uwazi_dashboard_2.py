@@ -17,28 +17,16 @@ st.set_page_config(page_title="Uwazi Report", layout="wide")
 # --- UI Styling for Tabs & Alerts ---
 st.markdown("""
     <style>
-        .stTabs [role="tablist"] {
-            border-bottom: 2px solid #009999;
-        }
-        .stTabs [role="tab"] {
-            font-weight: bold;
-            font-size: 16px;
-            padding: 12px;
-            margin-right: 12px;
-        }
-        .stAlert-success {
-            font-size: 15px; 
-        }
+        .stTabs [role="tablist"] { border-bottom: 2px solid #009999; }
+        .stTabs [role="tab"] { font-weight: bold; font-size: 16px; padding: 12px; margin-right: 12px; }
+        .stAlert-success { font-size: 15px; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("📘 Uwazi Report Dashboard")
 st.subheader("Login to view your personalized talent insights")
 
-# --- Access Code Input ---
-access_code = st.text_input(
-    "Enter your access code (e.g., A654L, B87J)"
-).strip().upper()
+access_code = st.text_input("Enter your access code (e.g., A654L, B87J)").strip().upper()
 
 if access_code in code_map:
     file_path = f"uwazi_reports/{code_map[access_code]}"
@@ -72,8 +60,8 @@ if access_code in code_map:
             "🧠 Overview",
             "🧩 Task Insights",
             "🎯 Career Recommendations",
-            "📥 Download Report",
-            "🔍 About Uwazi"
+            "🔍 About Uwazi",
+            "📥 Download Report"
         ])
 
         # — Tab 1: Overview —
@@ -90,8 +78,7 @@ if access_code in code_map:
 
             st.markdown("### 📊 Scores by Intelligence")
             bar_fig = px.bar(
-                overview_df,
-                x="Intelligence Area", y="Student Score",
+                overview_df, x="Intelligence Area", y="Student Score",
                 text="Student Score", color="Intelligence Area"
             )
             st.plotly_chart(bar_fig, use_container_width=True)
@@ -113,8 +100,8 @@ if access_code in code_map:
         with tab2:
             st.markdown("### 🧩 Task Scores and Insights")
             st.markdown("""
-            Each task targets an element within an intelligence area. Scores (out of 5) highlight where
-            you excel or may wish to grow. Use these to guide your learning journey.
+            Each task targets an element within an intelligence area. Scores (out of 5) highlight
+            where you excel or may wish to grow. Use these to guide your learning journey.
             """)
             st.dataframe(
                 task_df[["Intelligence Area","Task","Score (out of 5)","Comments"]],
@@ -139,8 +126,17 @@ if access_code in code_map:
             st.markdown("#### 🏫 Suggested Schools")
             st.write(", ".join(career_df["School"].dropna().head(5)))
 
-        # — Tab 4: Download Report (with Poppins) —
+        # — Tab 4: About Uwazi —
         with tab4:
+            st.markdown("### 🔍 Why Soma Siri Afrika, Uwazi & Shaba")
+            st.markdown("""
+            - **Soma Siri Afrika** uses culturally rooted, evidence-based methods to unearth and nurture African talent.  
+            - **Uwazi** is a 99-task psychometric assessment across nine intelligences—not just a questionnaire.  
+            - **Shaba** is your tailored club/course track built on your strengths, so you grow where you shine.
+            """)
+
+        # — Tab 5: Download Report (with embedded Poppins) —
+        with tab5:
             st.markdown("### 📥 Export Your Full Report with Charts & Insights")
 
             def generate_pdf():
@@ -153,12 +149,13 @@ if access_code in code_map:
                 Image.open(bar_buf).save("bar_chart.png")
                 Image.open(radar_buf).save("radar_chart.png")
 
-                # — build PDF with Poppins fonts (uni=True) —
+                # — build PDF with Poppins for full Unicode —
                 pdf = FPDF()
                 pdf.add_font("Poppins", "", "fonts/Poppins-Regular.ttf", uni=True)
                 pdf.add_font("Poppins", "B", "fonts/Poppins-Bold.ttf",      uni=True)
                 pdf.set_auto_page_break(True, margin=15)
                 pdf.add_page()
+                epw = pdf.w - pdf.l_margin - pdf.r_margin  # effective page width
 
                 # Title
                 pdf.set_font("Poppins", "B", 14)
@@ -167,48 +164,46 @@ if access_code in code_map:
 
                 # Summary
                 pdf.set_font("Poppins", "", 11)
-                pdf.multi_cell(0, 8, report_summary)
+                pdf.multi_cell(epw, 8, report_summary)
 
-                # Scores
+                # Scores section
                 pdf.ln(5)
                 pdf.set_font("Poppins", "B", 12)
                 pdf.cell(0, 10, "Scores by Intelligence", ln=True)
                 pdf.set_font("Poppins", "", 11)
                 for _, r in overview_df.iterrows():
                     line = f"{r['Intelligence Area']}: {r['Student Score']} ({r['Overall %']}%)"
-                    pdf.multi_cell(0, 8, line)
+                    pdf.multi_cell(epw, 8, line)
 
                 # Charts
                 pdf.ln(5)
                 pdf.set_font("Poppins", "B", 12)
                 pdf.cell(0, 10, "Visual Insights", ln=True)
-                pdf.image("bar_chart.png",   x=pdf.l_margin, w=pdf.w - pdf.l_margin - pdf.r_margin)
+                pdf.image("bar_chart.png",   x=pdf.l_margin, w=epw)
                 pdf.ln(4)
-                pdf.image("radar_chart.png", x=pdf.l_margin, w=pdf.w - pdf.l_margin - pdf.r_margin)
+                pdf.image("radar_chart.png", x=pdf.l_margin, w=epw)
 
                 # Career recommendations
                 pdf.ln(6)
                 pdf.set_font("Poppins", "B", 12)
                 pdf.cell(0, 10, "Career Recommendations", ln=True)
                 pdf.set_font("Poppins", "", 11)
-                pdf.multi_cell(0, 8, f"Top Intelligence: {top_intel}")
-                pdf.multi_cell(0, 8, f"Recommended Shaba Track: {shaba_track}")
+                pdf.multi_cell(epw, 8, f"Top Intelligence: {top_intel}")
+                pdf.multi_cell(epw, 8, f"Recommended Shaba Track: {shaba_track}")
 
                 careers = ", ".join(career_df["Career"].dropna().head(5))
                 degrees = ", ".join(career_df["Related University Degrees (Kenya/Online)"].dropna().head(5))
                 tvets   = ", ".join(career_df["Related TVET Courses (Kenya/Online)"].dropna().head(5))
                 schools = ", ".join(career_df["School"].dropna().head(5))
-
-                pdf.multi_cell(0, 8, f"Suggested Careers: {careers}")
-                pdf.multi_cell(0, 8, f"University Programs: {degrees}")
-                pdf.multi_cell(0, 8, f"TVET Courses: {tvets}")
-                pdf.multi_cell(0, 8, f"Schools: {schools}")
+                pdf.multi_cell(epw, 8, f"Suggested Careers: {careers}")
+                pdf.multi_cell(epw, 8, f"University Programs: {degrees}")
+                pdf.multi_cell(epw, 8, f"TVET Courses: {tvets}")
+                pdf.multi_cell(epw, 8, f"Schools: {schools}")
 
                 # Disclaimer footer
                 pdf.ln(4)
                 pdf.set_font("Poppins", "I", 9)
-                pdf.multi_cell(
-                    0, 6,
+                pdf.multi_cell(epw, 6,
                     "⚠️ This report is for personal development only. "
                     "Not a substitute for licensed psychological evaluation."
                 )
@@ -221,15 +216,6 @@ if access_code in code_map:
                 file_name=f"{student_name}_Uwazi_Report.pdf",
                 mime="application/pdf"
             )
-
-        # — Tab 5: About Uwazi —
-        with tab5:
-            st.markdown("### 🔍 Why Soma Siri Afrika, Uwazi & Shaba")
-            st.markdown("""
-            - **Soma Siri Afrika** uses culturally rooted, evidence-based methods to unearth and nurture African talent.  
-            - **Uwazi** is a 99-task psychometric assessment across nine intelligences—not just a questionnaire.  
-            - **Shaba** is your tailored club/course track built on your strengths, so you grow where you shine.
-            """)
 
     except Exception as e:
         st.error("❌ Failed to load your report. Please contact support.")
