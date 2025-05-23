@@ -153,6 +153,8 @@ if access_code in code_map:
                 pdf = FPDF()
                 pdf.add_font("Poppins", "", "fonts/Poppins-Regular.ttf", uni=True)
                 pdf.add_font("Poppins", "B", "fonts/Poppins-Bold.ttf",      uni=True)
+                pdf.add_font("Poppins", "I", "fonts/Poppins-Italic.ttf", uni=True)
+
                 pdf.set_auto_page_break(True, margin=15)
                 pdf.add_page()
                 epw = pdf.w - pdf.l_margin - pdf.r_margin  # effective page width
