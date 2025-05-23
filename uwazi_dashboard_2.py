@@ -72,7 +72,7 @@ if access_code in code_map:
             c1, c2 = st.columns(2)
             avg_score      = overview_df["Student Score"].mean()
             completion_pct = overview_df["Tasks_Completed"].sum() / overview_df["Number of Tasks"].sum() * 100
-            c1.metric("📈 Average Score", f"{avg_score:.1f}")
+            c1.metric("📈 Uwazi Compsite Insight Score", f"{avg_score:.1f}")
             c2.metric("✅ Task Completion", f"{completion_pct:.1f}%")
 
             st.markdown("### 📊 Scores by Intelligence")
