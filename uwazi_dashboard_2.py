@@ -51,9 +51,9 @@ if access_code in code_map:
         )
         st.markdown("📌 *Click the tabs below to explore your results.*  ")
         st.markdown(
-            "⚠️ *Disclaimer: This report is for personal development only. "
-            "Not a clinical or psychological diagnosis.*"
+            "⚠️ *Disclaimer: This report is for personal development only. Not a clinical or psychological diagnosis.*"
         )
+        st.markdown("🎖️ *Soma Siri Afrika is an award winning innovation as well as a member of the Career Developers Association of Kenya.* The Uwazi™️ and Siri MaP™️ are global patents. From Afrika, with love.")
 
         # — Tabs —
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -101,7 +101,7 @@ if access_code in code_map:
             st.markdown("### 🧩 Task Scores and Insights")
             st.markdown("""
                 Each task targets an element within an intelligence area.
-                These scores (out of 5) reveal your personal strengths and growth areas.
+                Scores (out of 5) highlight where you excel or may wish to grow.
             """)
             st.dataframe(
                 task_df[["Intelligence Area","Task","Score (out of 5)","Comments"]],
@@ -128,18 +128,61 @@ if access_code in code_map:
 
         # — Tab 4: About Uwazi —
         with tab4:
-            st.markdown("### 🔍 Why Soma Siri Afrika, Uwazi & Shaba")
+            st.header("🔍 Why Soma Siri Afrika, Uwazi & Shaba")
+
+            st.subheader("In a world where AI can do nearly all tasks … What truly matters?")
             st.markdown("""
-                - **Soma Siri Afrika** uses culturally rooted, evidence-based methods to unearth and nurture African talent.  
-                - **Uwazi** is a 99-task psychometric assessment across nine intelligences—not just a questionnaire.  
-                - **Shaba** is your tailored club/course track built on your strengths, so you grow where you shine.
+            ❓ **What uniquely human skills** should our children be cultivating today?
+            Uwazi dives deep—beyond rote learning—to uncover innate strengths and 21st-century mindsets. Do they need to learn computers and coding to catch up, or is there a different path that is uniquely theirs?
             """)
 
-        # — Tab 5: Download Report (Poppins in PDF) —
+            st.subheader("🌍 Soma Siri Afrika")
+            st.markdown("""
+                        -The world's first innovation incubator for kids and youth using AI, Psychology and education to prep super heroes for Afrika
+            - Pan-African mission to discover and nurture each child’s innate talents  
+            - Blends educational neuroscience with our rich cultural heritage  
+            - Uses real, hands-on psychometric tasks—not just surveys  
+            """)
+
+            st.subheader("🧠 Uwazi for Excans")
+            st.markdown("""
+            **99-Task Talent Triage**  
+            - Eight core intelligences (Linguistic, Logical-Mathematical, Spatial, etc.)  
+            - Plus entrepreneurial thinking & creative problem solving  
+
+            **Key Benefits**  
+            1. **Strength-Based Insights**: Personalized development blueprints  
+            2. **Early Advantage**: Identify talents from age 6  
+            3. **Growth Tracking**: Quarterly mini-reassessments on your dashboard  
+            """)
+
+            st.subheader("🚀 Shaba Level")
+            st.markdown("""
+            **Strength-First Pathways**  
+            - Customised courses based on this Uwazi Report*  
+            - Small-group coaching by certified specialists  
+            - Blended live labs + self-paced modules
+            - Can be accessed fully online
+            - Real-world challenges (hackathons, design sprints)  
+            """)
+
+            st.subheader("🏆 Family Perks & Next Steps")
+            perks = st.columns(3)
+            perks[0].markdown("**1. Congrats on completing level 1: Uwazi.")
+            perks[1].markdown("**2. Upgrade to Shaba Level**  \nStart on your 12week nanodegree and get work as soon as you are done!.")
+            perks[2].markdown("**3. Parent Portal**  \nDashboards, alerts & coaching tips. - COMING SOON")
+
+            st.markdown("""
+            🏅 *Families report a **90% boost** in engagement when learning aligns  
+            with natural strengths. Kids report learning for longer hours than ever before - this is talent led education. \nYou may Enroll for Uwazi 4-7 years, 8-12 years or 13-17 years**  \nEarly-bird mini-snapshot included.*
+            """)
+
+        # — Tab 5: Download Report —
         with tab5:
             st.markdown("### 📥 Export Your Full Report with Charts & Insights")
+
             def generate_pdf():
-                # render charts to PNG
+                # render charts
                 bar_buf, radar_buf = BytesIO(), BytesIO()
                 pio.write_image(bar_fig,   bar_buf,   format="png")
                 pio.write_image(radar_fig, radar_buf, format="png")
@@ -147,15 +190,15 @@ if access_code in code_map:
                 Image.open(bar_buf).save("bar_chart.png")
                 Image.open(radar_buf).save("radar_chart.png")
 
+                # build PDF
                 pdf = FPDF()
                 pdf.add_font("Poppins", "", "fonts/Poppins-Regular.ttf", uni=True)
-                pdf.add_font("Poppins", "B", "fonts/Poppins-Bold.ttf",      uni=True)
-                pdf.add_font("Poppins", "I", "fonts/Poppins-Italic.ttf",    uni=True)
+                pdf.add_font("Poppins", "B", "fonts/Poppins-Bold.ttf", uni=True)
+                pdf.add_font("Poppins", "I", "fonts/Poppins-Italic.ttf", uni=True)
                 pdf.set_auto_page_break(True, 15)
                 pdf.add_page()
                 epw = pdf.w - pdf.l_margin - pdf.r_margin
 
-                # Title
                 pdf.set_font("Poppins", "B", 14)
                 pdf.cell(0, 10, f"Uwazi Talent Report – {student_name}", ln=True, align="C")
                 pdf.ln(6)
@@ -164,14 +207,14 @@ if access_code in code_map:
                 pdf.set_font("Poppins", "", 11)
                 pdf.multi_cell(epw, 8, report_summary)
 
-                # Scores
+                # Intelligence scores
                 pdf.ln(5)
                 pdf.set_font("Poppins", "B", 12)
                 pdf.cell(0, 10, "Scores by Intelligence", ln=True)
                 pdf.set_font("Poppins", "", 11)
                 for _, r in overview_df.iterrows():
-                    txt = f"{r['Intelligence Area']}: {r['Student Score']} ({r['Overall %']}%)"
-                    pdf.multi_cell(epw, 8, txt)
+                    line = f"{r['Intelligence Area']}: {r['Student Score']} ({r['Overall %']}%)"
+                    pdf.multi_cell(epw, 8, line)
 
                 # Charts
                 pdf.ln(5)
@@ -198,15 +241,15 @@ if access_code in code_map:
                 pdf.multi_cell(epw, 8, f"TVET Courses: {tvets}")
                 pdf.multi_cell(epw, 8, f"Schools: {schools}")
 
-                # Disclaimer
+                # Footer disclaimer
                 pdf.ln(4)
                 pdf.set_font("Poppins", "I", 9)
-                pdf.multi_cell(epw, 6,
+                pdf.multi_cell(
+                    epw, 6,
                     "⚠️ This report is for personal development only. "
                     "Not a substitute for licensed psychological evaluation."
                 )
 
-                # **KEY**: output as bytes directly—no extra .encode()
                 return BytesIO(pdf.output(dest="S"))
 
             st.download_button(
